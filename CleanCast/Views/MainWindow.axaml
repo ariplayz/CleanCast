@@ -6,8 +6,8 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="CleanCast.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="CleanCast">
+        Icon="/Assets/ClearCast-IconOnly-Square.ico"
+        Title="CleanCast Controller">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -15,6 +15,101 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <DockPanel LastChildFill="True">
+        <!-- Sidebar or Header -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="20" Margin="0,0,0,20">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <StackPanel Grid.Column="0">
+                    <Image Source="/Assets/ClearCast.png" Height="40" HorizontalAlignment="Left"/>
+                    <Label Classes="subtitle" Content="Controller" Margin="0,5,0,0"/>
+                </StackPanel>
+                
+                <Button Grid.Column="2" Classes="primary" Click="OpenCastWindow_Click" IsVisible="{Binding !IsCastWindowOpen}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Classes="icon" Content="&#x25B6;"/>
+                        <TextBlock Text="Start Projection" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid ColumnDefinitions="*, 400" Margin="20">
+            <!-- Left Side: Queue Management -->
+            <StackPanel Spacing="20" Grid.Column="0">
+                <Border Classes="card">
+                    <StackPanel Spacing="15">
+                        <Label Classes="subtitle" Content="Add Content" Margin="0,0,0,10"/>
+                        
+                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                            <TextBox Grid.Column="0" Grid.Row="0" 
+                                     Watermark="Paste YouTube URL here..." 
+                                     Text="{Binding YoutubeUrl}"/>
+                            <Button Grid.Column="1" Grid.Row="0" 
+                                    Content="Add YouTube" 
+                                    Command="{Binding AddYoutubeActionCommand}" 
+                                    Classes="primary"/>
+                            
+                            <Button Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" 
+                                    Content="Add Local File" 
+                                    Click="AddFile_Click" 
+                                    Classes="secondary" 
+                                    HorizontalAlignment="Stretch"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card" VerticalAlignment="Stretch">
+                    <DockPanel LastChildFill="True" MinHeight="300">
+                        <Label DockPanel.Dock="Top" Classes="subtitle" Content="Queue" Margin="0,0,0,10"/>
+                        
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                            <Button Content="Clear Queue" Command="{Binding ClearQueueCommand}" Classes="secondary"/>
+                            <Button Content="Play Next / Continue" Command="{Binding PlayNextCommand}" Classes="primary" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <ListBox ItemsSource="{Binding Queue}" Background="Transparent">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10" BorderBrush="#334155" BorderThickness="0,0,0,1">
+                                        <Grid ColumnDefinitions="Auto, *">
+                                            <Label Grid.Column="0" Classes="icon" Content="&#x25B8;" Margin="0,0,10,0" Foreground="{DynamicResource PrimaryRed}"/>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Title}" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding DisplaySource}" FontSize="12" Opacity="0.6"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Right Side: Info/Status -->
+            <StackPanel Grid.Column="1" Margin="20,0,0,0" Spacing="20">
+                <Border Classes="card">
+                    <StackPanel Spacing="15">
+                        <Label Classes="subtitle" Content="Current Status"/>
+                        <Border Background="#1E293B" CornerRadius="8" Padding="15">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="Now Playing:" FontSize="12" Opacity="0.6"/>
+                                <TextBlock Text="{Binding CurrentItem.Title, FallbackValue='Stopped'}" FontWeight="Bold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding CurrentItem.DisplaySource}" FontSize="12" Opacity="0.6" IsVisible="{Binding CurrentItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="10">
+                        <Label Classes="subtitle" Content="Help &amp; Info"/>
+                        <TextBlock Text="1. Start Projection window.&#10;2. Add YouTube links or local files to the queue.&#10;3. Press 'Play Next' to start the video.&#10;4. Screen goes black automatically when video ends." 
+                                   TextWrapping="Wrap" FontSize="14" Foreground="{DynamicResource SecondaryForeground}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
 
 </Window>

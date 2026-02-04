@@ -10,68 +10,50 @@
     </Application.Styles>
 
     <Application.Resources>
-        <SolidColorBrush x:Key="PrimaryForeground">#020817</SolidColorBrush>
-        <LinearGradientBrush x:Key="PrimaryBackground" StartPoint="50%,0%" EndPoint="50%,100%">
-            <GradientStop Color="#003c64" Offset="0.0"/>
-            <GradientStop Color="#000e26" Offset="1.0"/>
-        </LinearGradientBrush>
+        <!-- Modern Red Theme Colors -->
+        <Color x:Key="SystemAccentColor">#E63946</Color>
+        <Color x:Key="SystemAccentColorLight">#F1FAEE</Color>
+        <Color x:Key="SystemAccentColorDark">#A8202A</Color>
         
-        <!-- Liquid Glass - Much more translucent (30-50% opacity) -->
-        <LinearGradientBrush x:Key="GreyGradientBrush" StartPoint="0%, 0%" EndPoint="100%, 100%">
-            <GradientStop Offset="0" Color="#4DCCCCCC"></GradientStop>
-            <GradientStop Offset="0.3" Color="#66BEBEBE"></GradientStop>
-            <GradientStop Offset="0.7" Color="#66B8B8B8"></GradientStop>
-            <GradientStop Offset="1" Color="#4DC0C0C0"></GradientStop>
+        <SolidColorBrush x:Key="PrimaryRed">#E63946</SolidColorBrush>
+        <SolidColorBrush x:Key="DarkRed">#A8202A</SolidColorBrush>
+        <SolidColorBrush x:Key="OffWhite">#F1FAEE</SolidColorBrush>
+        <SolidColorBrush x:Key="DeepDark">#1D3557</SolidColorBrush>
+        <SolidColorBrush x:Key="MidDark">#457B9D</SolidColorBrush>
+        <SolidColorBrush x:Key="LightBlue">#A8DADC</SolidColorBrush>
+
+        <SolidColorBrush x:Key="BackgroundBrush">#0F172A</SolidColorBrush>
+        <SolidColorBrush x:Key="CardBackgroundBrush">#1E293B</SolidColorBrush>
+        <SolidColorBrush x:Key="PrimaryForeground">#F8FAFC</SolidColorBrush>
+        <SolidColorBrush x:Key="SecondaryForeground">#94A3B8</SolidColorBrush>
+        <SolidColorBrush x:Key="AccentForeground">White</SolidColorBrush>
+        
+        <!-- Modern Red Gradients -->
+        <LinearGradientBrush x:Key="RedGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#E63946" Offset="0.0"/>
+            <GradientStop Color="#A8202A" Offset="1.0"/>
         </LinearGradientBrush>
 
-        <!-- Liquid glass border with prominent shimmer -->
-        <LinearGradientBrush x:Key="GreyBorderGradientBrush" StartPoint="0%, 0%" EndPoint="100%, 100%">
-            <GradientStop Color="#B3FFFFFF" Offset="0.0"/>
-            <GradientStop Color="#80F8F8F8" Offset="0.15"/>
-            <GradientStop Color="#4DE0E0E0" Offset="0.35"/>
-            <GradientStop Color="#33D8D8D8" Offset="0.5"/>
-            <GradientStop Color="#4DE5E5E5" Offset="0.65"/>
-            <GradientStop Color="#80F0F0F0" Offset="0.85"/>
-            <GradientStop Color="#B3FFFFFF" Offset="1.0"/>
-        </LinearGradientBrush>
-        
-        <!-- Inner glow for extra depth on edges -->
-        <LinearGradientBrush x:Key="InnerGlowBrush" StartPoint="50%, 50%" EndPoint="50%, 100%">
-            <GradientStop Color="#4DFFFFFF" Offset="0.0"/>
-            <GradientStop Color="#26FFFFFF" Offset="0.3"/>
-            <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+        <LinearGradientBrush x:Key="DarkRedGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#A8202A" Offset="0.0"/>
+            <GradientStop Color="#7B171E" Offset="1.0"/>
         </LinearGradientBrush>
 
-        <!-- Ultra translucent option (20-40% opacity) -->
-        <LinearGradientBrush x:Key="DarkGlassBrush" StartPoint="0%, 0%" EndPoint="100%, 100%">
-            <GradientStop Offset="0" Color="#33B0B0B0"></GradientStop>
-            <GradientStop Offset="0.5" Color="#4DA8A8A8"></GradientStop>
-            <GradientStop Offset="1" Color="#33AAAAAA"></GradientStop>
+        <!-- Glass Effect with Red Tint -->
+        <LinearGradientBrush x:Key="RedGlassBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Offset="0" Color="#26E63946"></GradientStop>
+            <GradientStop Offset="1" Color="#1AE63946"></GradientStop>
         </LinearGradientBrush>
 
-        <!-- Lighter frosted option (40-50% opacity) -->
-        <LinearGradientBrush x:Key="FrostedGlassBrush" StartPoint="0%, 0%" EndPoint="100%, 100%">
-            <GradientStop Offset="0" Color="#66D8D8D8"></GradientStop>
-            <GradientStop Offset="0.5" Color="#80CCCCCC"></GradientStop>
-            <GradientStop Offset="1" Color="#66D0D0D0"></GradientStop>
+        <LinearGradientBrush x:Key="RedBorderGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#80E63946" Offset="0.0"/>
+            <GradientStop Color="#40A8202A" Offset="1.0"/>
         </LinearGradientBrush>
 
-        <!-- Subtle reflection overlay (10-20% opacity) -->
-        <LinearGradientBrush x:Key="GlassReflectionBrush" StartPoint="0%, 0%" EndPoint="0%, 100%">
-            <GradientStop Offset="0" Color="#26FFFFFF"></GradientStop>
-            <GradientStop Offset="0.3" Color="#0DFFFFFF"></GradientStop>
-            <GradientStop Offset="1" Color="#00FFFFFF"></GradientStop>
-        </LinearGradientBrush>
-        
-        <SolidColorBrush x:Key="PrimaryHoverBackground">#041132</SolidColorBrush>
-        <SolidColorBrush x:Key="PrimaryHoverForeground">White</SolidColorBrush>
-        <SolidColorBrush x:Key="SecondaryForeground">#6ea3b8</SolidColorBrush>
-        
         <FontFamily x:Key="AkkoPro">/Assets/Fonts/Akko-Pro-Regular.ttf#Akko Pro</FontFamily>
         <FontFamily x:Key="AkkoProBold">/Assets/Fonts/Akko-Pro-Bold.ttf#Akko Pro</FontFamily>
         <FontFamily x:Key="Phosphor">/Assets/Fonts/Phosphor.ttf#Phosphor</FontFamily>
         <FontFamily x:Key="PhosphorFill">/Assets/Fonts/Phosphor-Fill.ttf#Phosphor-Fill</FontFamily>
         <FontFamily x:Key="JetBrainsMono">/Assets/Fonts/JetBrainsMono-Regular.ttf#JetBrains Mono</FontFamily>
-        
     </Application.Resources>
 </Application>

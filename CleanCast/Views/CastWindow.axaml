@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        xmlns:vm="using:CleanCast.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="CleanCast.Views.CastWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="CleanCast Display"
+        Icon="/Assets/ClearCast-IconOnly-Square.ico"
+        Background="Black">
+    <Grid>
+        <vlc:VideoView Name="VideoPlayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <Panel Background="Black" IsVisible="{Binding CurrentItem, Converter={x:Static ObjectConverters.IsNull}}">
+            <!-- Minimal placeholder for when nothing is being cast -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
+                <Image Source="/Assets/ClearCast.png" Width="200" Opacity="0.5"/>
+                <TextBlock Text="Ready for casting..." 
+                           HorizontalAlignment="Center" 
+                           Foreground="{DynamicResource SecondaryForeground}"
+                           FontSize="20"
+                           Opacity="0.8"/>
+            </StackPanel>
+        </Panel>
+        
+        <!-- Discreet Control Panel -->
+        <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="20" Orientation="Horizontal" Spacing="10">
+            <Button Name="FullscreenBtn" 
+                    Content="Fullscreen" 
+                    Classes="secondary"
+                    Width="120"
+                    Opacity="0.1">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Opacity" Value="0.8"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
+            
+            <Button Name="CloseBtn" 
+                    Content="Exit" 
+                    Classes="primary"
+                    Width="80"
+                    Opacity="0.1">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Opacity" Value="0.8"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
