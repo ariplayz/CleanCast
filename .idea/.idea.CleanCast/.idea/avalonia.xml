@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="CleanCast/App.axaml" value="CleanCast/CleanCast.csproj" />
+        <entry key="CleanCast/AppDefaultStyles.axaml" value="CleanCast/CleanCast.csproj" />
+        <entry key="CleanCast/Views/MainWindow.axaml" value="CleanCast/CleanCast.csproj" />
+      </map>
+    </option>
+  </component>
+</project>
