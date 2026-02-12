@@ -9,8 +9,8 @@
 
     <ItemGroup>
         <Folder Include="Assets\" />
-        <Folder Include="Models\" />
         <AvaloniaResource Include="Assets\**" />
+        <!-- Removed wildcard AvaloniaResource Include to avoid duplicate x:Class errors -->
     </ItemGroup>
 
     <ItemGroup>

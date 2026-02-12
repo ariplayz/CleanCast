@@ -24,40 +24,5 @@
                            Opacity="0.8"/>
             </StackPanel>
         </Panel>
-        
-        <!-- Discreet Control Panel overlay using Popup to stay on top of native VideoView -->
-        <Popup Name="ControlPopup"
-               IsOpen="True" 
-               IsLightDismissEnabled="False"
-               Placement="Bottom"
-               VerticalOffset="-60"
-               HorizontalOffset="-20"
-               PlacementTarget="{Binding ElementName=VideoPlayer}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Name="FullscreenBtn" 
-                        Content="Fullscreen" 
-                        Classes="secondary"
-                        Width="120"
-                        Opacity="0.5">
-                    <Button.Styles>
-                        <Style Selector="Button:pointerover">
-                            <Setter Property="Opacity" Value="0.9"/>
-                        </Style>
-                    </Button.Styles>
-                </Button>
-                
-                <Button Name="CloseBtn" 
-                        Content="Exit" 
-                        Classes="primary"
-                        Width="80"
-                        Opacity="0.5">
-                    <Button.Styles>
-                        <Style Selector="Button:pointerover">
-                            <Setter Property="Opacity" Value="0.9"/>
-                        </Style>
-                    </Button.Styles>
-                </Button>
-            </StackPanel>
-        </Popup>
     </Grid>
 </Window>

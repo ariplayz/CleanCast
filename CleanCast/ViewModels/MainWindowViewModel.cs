@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CleanCast.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +14,8 @@ namespace CleanCast.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly YoutubeClient _youtube = new();
+    private readonly AppSettings _settings;
+    private Timer? _errorClearTimer;
     
     [ObservableProperty]
     private ObservableCollection<MediaItem> _queue = new();
@@ -27,34 +29,102 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isCastWindowOpen;
 
+    [ObservableProperty]
+    private bool _isFullscreen;
+
+    // Replaced generated ObservableProperty with explicit implementation for diagnostics
+    private string _errorMessage = string.Empty;
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        set
+        {
+            if (SetProperty(ref _errorMessage, value))
+            {
+                // If set, schedule auto-clear after 8 seconds.
+                _errorClearTimer?.Dispose();
+                _errorClearTimer = null;
+                if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    _errorClearTimer = new Timer(_ =>
+                    {
+                        ErrorMessage = string.Empty;
+                    }, null, TimeSpan.FromSeconds(8), Timeout.InfiniteTimeSpan);
+                }
+            }
+        }
+    }
+
+    public bool UseHardwareDecoding
+    {
+        get => _settings.UseHardwareDecoding;
+        set
+        {
+            if (_settings.UseHardwareDecoding != value)
+            {
+                _settings.UseHardwareDecoding = value;
+                _settings.Save();
+                OnPropertyChanged(nameof(UseHardwareDecoding));
+            }
+        }
+    }
+
+    public event EventHandler? ToggleFullscreenRequested;
+    public event EventHandler? CloseCastWindowRequested;
+
     public event EventHandler<MediaItem>? PlayRequested;
+
+    public MainWindowViewModel()
+    {
+        _settings = AppSettings.Load();
+    }
+
+    [RelayCommand]
+    private void ToggleFullscreen()
+    {
+        IsFullscreen = !IsFullscreen;
+        ToggleFullscreenRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void CloseCastWindow()
+    {
+        CloseCastWindowRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     [RelayCommand]
     private async Task AddYoutubeAction()
     {
-        if (string.IsNullOrWhiteSpace(YoutubeUrl)) return;
+        var url = YoutubeUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(url)) return;
 
         try
         {
-            var video = await _youtube.Videos.GetAsync(YoutubeUrl);
-            var streamManifest = await _youtube.Videos.Streams.GetManifestAsync(video.Id);
-            var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
+            // Resolve video metadata. Instead of trying to get a direct stream URL (which
+            // can sometimes return 403 from YouTube), store the video page URL and let
+            // LibVLC resolve playback (it has youtube scripts bundled with libvlc).
+            var video = await _youtube.Videos.GetAsync(url);
 
-            if (streamInfo != null)
+            var item = new MediaItem
             {
-                var item = new MediaItem
-                {
-                    Title = video.Title,
-                    Source = streamInfo.Url,
-                    Type = MediaType.YouTube
-                };
-                Queue.Add(item);
-                YoutubeUrl = string.Empty;
-            }
+                Title = video.Title,
+                // Use canonical YouTube watch URL so libVLC's youtube.lua can handle it.
+                Source = $"https://www.youtube.com/watch?v={video.Id}",
+                Type = MediaType.YouTube
+            };
+
+            Queue.Add(item);
+            YoutubeUrl = string.Empty;
+
+            // Clear previous errors on successful add
+            ErrorMessage = string.Empty;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Handle error (e.g., invalid URL)
+            var message = ex.Message ?? "Unknown YouTube error";
+            Console.WriteLine($"[DEBUG_LOG] YouTube error: {message}");
+            // Surface the error to the UI
+            ErrorMessage = $"YouTube error: {message}";
         }
     }
 
