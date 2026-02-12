@@ -45,18 +45,24 @@ public partial class CastWindow : Window
         Closed += CastWindow_Closed;
     }
 
-    private void CastWindow_Opened(object? sender, EventArgs e)
+    private async void CastWindow_Opened(object? sender, EventArgs e)
     {
-        Core.Initialize();
-        _libVlc = new LibVLC();
-        _mediaPlayer = new MediaPlayer(_libVlc);
+        // Initialize LibVLC and MediaPlayer on a background thread to prevent UI hang
+        await System.Threading.Tasks.Task.Run(() =>
+        {
+            _libVlc = new LibVLC();
+            _mediaPlayer = new MediaPlayer(_libVlc);
+        });
         
-        if (_videoView != null)
+        if (_videoView != null && _mediaPlayer != null)
         {
             _videoView.MediaPlayer = _mediaPlayer;
         }
 
-        _mediaPlayer.EndReached += MediaPlayer_EndReached;
+        if (_mediaPlayer != null)
+        {
+            _mediaPlayer.EndReached += MediaPlayer_EndReached;
+        }
 
         if (DataContext is MainWindowViewModel vm)
         {
@@ -77,14 +83,19 @@ public partial class CastWindow : Window
 
     private void MediaPlayer_EndReached(object? sender, EventArgs e)
     {
+        // EndReached is called from a LibVLC thread. 
+        // We update the UI and stop the player safely.
+        
         Dispatcher.UIThread.Post(() =>
         {
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.CurrentItem = null;
             }
-            _mediaPlayer?.Stop();
         });
+
+        // Calling Stop() directly in EndReached or synchronously on UI thread can deadlock.
+        System.Threading.Tasks.Task.Run(() => _mediaPlayer?.Stop());
     }
 
     private void CastWindow_Closed(object? sender, EventArgs e)
