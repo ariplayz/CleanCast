@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CleanCast.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using YoutubeExplode;
-using YoutubeExplode.Videos.Streams;
 
 namespace CleanCast.ViewModels;
 
@@ -32,7 +32,6 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isFullscreen;
 
-    // Replaced generated ObservableProperty with explicit implementation for diagnostics
     private string _errorMessage = string.Empty;
     public string ErrorMessage
     {
@@ -41,7 +40,6 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (SetProperty(ref _errorMessage, value))
             {
-                // If set, schedule auto-clear after 8 seconds.
                 _errorClearTimer?.Dispose();
                 _errorClearTimer = null;
                 if (!string.IsNullOrEmpty(_errorMessage))
@@ -71,7 +69,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public event EventHandler? ToggleFullscreenRequested;
     public event EventHandler? CloseCastWindowRequested;
-
     public event EventHandler<MediaItem>? PlayRequested;
 
     public MainWindowViewModel()
@@ -100,30 +97,25 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            // Resolve video metadata. Instead of trying to get a direct stream URL (which
-            // can sometimes return 403 from YouTube), store the video page URL and let
-            // LibVLC resolve playback (it has youtube scripts bundled with libvlc).
+            Console.WriteLine($"[addYoutube] Fetching metadata for {url}");
             var video = await _youtube.Videos.GetAsync(url);
 
             var item = new MediaItem
             {
                 Title = video.Title,
-                // Use canonical YouTube watch URL so libVLC's youtube.lua can handle it.
                 Source = $"https://www.youtube.com/watch?v={video.Id}",
                 Type = MediaType.YouTube
             };
 
             Queue.Add(item);
             YoutubeUrl = string.Empty;
-
-            // Clear previous errors on successful add
             ErrorMessage = string.Empty;
+            Console.WriteLine($"[addYoutube] Added to queue: {item.Title}");
         }
         catch (Exception ex)
         {
             var message = ex.Message ?? "Unknown YouTube error";
-            Console.WriteLine($"[DEBUG_LOG] YouTube error: {message}");
-            // Surface the error to the UI
+            Console.WriteLine($"[addYoutube] Error: {message}");
             ErrorMessage = $"YouTube error: {message}";
         }
     }
@@ -163,3 +155,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Queue.Clear();
     }
 }
+
+
+
+

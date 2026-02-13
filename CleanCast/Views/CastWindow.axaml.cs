@@ -1,10 +1,13 @@
 using System;
-using System.Diagnostics;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.Platform;
 using CleanCast.ViewModels;
+using CleanCast.Services;
 using LibVLCSharp.Shared;
 using LibVLCSharp.Avalonia;
 
@@ -14,160 +17,225 @@ public partial class CastWindow : Window
 {
     private LibVLC? _libVlc;
     private MediaPlayer? _mediaPlayer;
+    private Media? _currentMedia;
     private VideoView? _videoView;
+    private Panel? _youtubeContainer;
+    private string? _currentYoutubeFile;
+
+    private YoutubeDownloadService? _youtubeDownloadService;
 
     public CastWindow()
     {
         InitializeComponent();
-        
-        _videoView = this.FindControl<VideoView>("VideoPlayer");
-
         Opened += CastWindow_Opened;
         Closed += CastWindow_Closed;
     }
 
     private async void CastWindow_Opened(object? sender, EventArgs e)
     {
-        // Determine hardware-decoding option from VM settings (if available)
-        var useHw = true; // default
+        var useHw = true;
         if (DataContext is MainWindowViewModel vm)
         {
             useHw = vm.UseHardwareDecoding;
         }
 
-        // Initialize LibVLC and MediaPlayer on a background thread to prevent UI hang
-        await System.Threading.Tasks.Task.Run(() =>
+        // Initialize YouTube downloader service
+        _youtubeDownloadService = new YoutubeDownloadService("https://ytdl.delphigamerz.xyz");
+
+        await Task.Run(() =>
         {
             var options = useHw ? Array.Empty<string>() : new[] { "--avcodec-hw=none" };
             _libVlc = new LibVLC(options);
             _mediaPlayer = new MediaPlayer(_libVlc);
         });
-        
+
+        _videoView = this.FindControl<VideoView>("VideoPlayer");
+        _youtubeContainer = this.FindControl<Panel>("YoutubeContainer");
+
         if (_videoView != null && _mediaPlayer != null)
         {
             _videoView.MediaPlayer = _mediaPlayer;
-        }
-
-        if (_mediaPlayer != null)
-        {
             _mediaPlayer.EndReached += MediaPlayer_EndReached;
-            _mediaPlayer.EncounteredError += MediaPlayer_EncounteredError;
-            _mediaPlayer.Playing += MediaPlayer_Playing;
-            _mediaPlayer.Stopped += MediaPlayer_Stopped;
         }
 
-        if (DataContext is MainWindowViewModel vm2)
+        if (DataContext is MainWindowViewModel vmMain)
         {
-            vm2.PlayRequested += Vm_PlayRequested;
-            vm2.ToggleFullscreenRequested += Vm_ToggleFullscreenRequested;
-            vm2.CloseCastWindowRequested += Vm_CloseCastWindowRequested;
+            vmMain.PlayRequested += Vm_PlayRequested;
+            vmMain.ToggleFullscreenRequested += Vm_ToggleFullscreenRequested;
+            vmMain.CloseCastWindowRequested += Vm_CloseCastWindowRequested;
         }
     }
 
-    private void MediaPlayer_Stopped(object? sender, EventArgs e)
+    private void Vm_PlayRequested(object? sender, Models.MediaItem item)
     {
-        // MediaPlayer events can be raised from libVLC threads. Marshal to the UI thread
-        Dispatcher.UIThread.Post(() =>
+        if (item.Type == Models.MediaType.YouTube)
         {
-            if (DataContext is MainWindowViewModel vm)
-            {
-                vm.ErrorMessage = string.Empty;
-            }
-        });
+            PlayYoutubeEmbedded(item);
+        }
+        else
+        {
+            PlayLocalFile(item);
+        }
     }
 
-    private void MediaPlayer_Playing(object? sender, EventArgs e)
+    private async void PlayYoutubeEmbedded(Models.MediaItem item)
     {
-        // MediaPlayer events can be raised from libVLC threads. Marshal to the UI thread
         Dispatcher.UIThread.Post(() =>
         {
-            if (DataContext is MainWindowViewModel vm)
+            try
             {
-                vm.ErrorMessage = string.Empty;
-            }
-        });
-    }
+                Console.WriteLine($"[youtube] Playing: {item.Title}");
 
-    private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
-    {
-        // Called from libVLC thread; marshal to UI thread and surface to VM
-        Dispatcher.UIThread.Post(async () =>
-        {
-            if (DataContext is MainWindowViewModel vm)
-            {
-                vm.ErrorMessage = "Playback error: An error occurred during playback. Trying fallback resolver...";
+                // Show video player, hide youtube container
+                if (_videoView != null) _videoView.IsVisible = true;
+                if (_youtubeContainer != null) _youtubeContainer.IsVisible = false;
 
-                // try yt-dlp fallback if the CurrentItem is a YouTube URL
-                var url = vm.CurrentItem?.Source;
-                if (!string.IsNullOrEmpty(url) && url.Contains("youtube.com", StringComparison.OrdinalIgnoreCase))
+                if (DataContext is MainWindowViewModel vm)
                 {
-                    var resolved = await TryResolveWithYtDlpAsync(url);
-                    if (!string.IsNullOrEmpty(resolved))
-                    {
-                        // play the resolved URL
-                        try
-                        {
-                            var media = new Media(_libVlc, new Uri(resolved));
-                            _mediaPlayer?.Play(media);
-                            vm.ErrorMessage = string.Empty;
-                            return;
-                        }
-                        catch (Exception ex)
-                        {
-                            vm.ErrorMessage = $"Fallback playback error: {ex.Message}";
-                        }
-                    }
-                    else
-                    {
-                        vm.ErrorMessage = "Fallback resolver failed (yt-dlp not available or no URL).";
-                    }
+                    vm.ErrorMessage = "Fetching stream info...";
                 }
-                else
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[youtube] Error: {ex.Message}");
+                if (DataContext is MainWindowViewModel vm)
                 {
-                    vm.ErrorMessage = "Playback error: An error occurred during playback.";
+                    vm.ErrorMessage = $"YouTube error: {ex.Message}";
                 }
             }
         });
+
+        // Fetch stream info from the API
+        if (_youtubeDownloadService == null)
+        {
+            _youtubeDownloadService = new YoutubeDownloadService("https://ytdl.delphigamerz.xyz");
+        }
+
+        var downloadInfo = await _youtubeDownloadService.GetDownloadUrlAsync(item.Source);
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                if (downloadInfo == null)
+                {
+                    if (DataContext is MainWindowViewModel vm)
+                    {
+                        vm.ErrorMessage = "Failed to fetch YouTube video";
+                    }
+                    return;
+                }
+
+                // Try to use the best available stream
+                string? streamUrl = null;
+
+                // Priority: video_url > url > first stream
+                if (!string.IsNullOrEmpty(downloadInfo.VideoUrl))
+                {
+                    streamUrl = downloadInfo.VideoUrl;
+                    Console.WriteLine("[youtube] Using video_url stream");
+                }
+                else if (!string.IsNullOrEmpty(downloadInfo.Url))
+                {
+                    streamUrl = downloadInfo.Url;
+                    Console.WriteLine("[youtube] Using url stream");
+                }
+                else if (downloadInfo.Streams?.Count > 0)
+                {
+                    streamUrl = downloadInfo.Streams[0].Url;
+                    Console.WriteLine($"[youtube] Using stream: {downloadInfo.Streams[0].Format}");
+                }
+
+                if (string.IsNullOrEmpty(streamUrl))
+                {
+                    if (DataContext is MainWindowViewModel vm)
+                    {
+                        vm.ErrorMessage = "No playable stream found";
+                    }
+                    return;
+                }
+
+                // Play the stream with VLC
+                if (_libVlc == null || _mediaPlayer == null)
+                {
+                    if (DataContext is MainWindowViewModel vm)
+                    {
+                        vm.ErrorMessage = "VLC not initialized";
+                    }
+                    return;
+                }
+
+                var media = new Media(_libVlc, streamUrl);
+                _currentMedia?.Dispose();
+                _currentMedia = media;
+                _mediaPlayer.Play(media);
+
+                if (DataContext is MainWindowViewModel vmPlay)
+                {
+                    vmPlay.ErrorMessage = string.Empty;
+                }
+
+                Console.WriteLine($"[youtube] Now playing: {downloadInfo.Title}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[youtube] Playback Error: {ex.Message}");
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.ErrorMessage = $"Playback error: {ex.Message}";
+                }
+            }
+        });
     }
 
-    private async Task<string?> TryResolveWithYtDlpAsync(string pageUrl)
+    private void PlayLocalFile(Models.MediaItem item)
     {
-        try
+        Dispatcher.UIThread.Post(() =>
         {
-            var psi = new ProcessStartInfo
+            try
             {
-                FileName = "yt-dlp",
-                Arguments = $"-f best -g \"{pageUrl}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
+                Console.WriteLine($"[vlc] Playing: {item.Source}");
 
-            using var proc = Process.Start(psi);
-            if (proc == null) return null;
+                // Show video player, hide youtube container
+                if (_videoView != null) _videoView.IsVisible = true;
+                if (_youtubeContainer != null) _youtubeContainer.IsVisible = false;
 
-            // Wait up to 8 seconds
-            var completed = await Task.Run(() => proc.WaitForExit(8000));
-            if (!completed)
-            {
-                try { proc.Kill(true); } catch { }
-                return null;
+                if (_libVlc == null || _mediaPlayer == null) return;
+
+                var media = new Media(_libVlc, item.Source);
+                _currentMedia?.Dispose();
+                _currentMedia = media;
+                _mediaPlayer.Play(media);
+
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.ErrorMessage = string.Empty;
+                }
             }
-
-            var output = await proc.StandardOutput.ReadToEndAsync();
-            var err = await proc.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrWhiteSpace(output))
+            catch (Exception ex)
             {
-                var first = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
-                return first.Trim();
+                Console.WriteLine($"[vlc] Error: {ex.Message}");
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.ErrorMessage = $"Playback error: {ex.Message}";
+                }
             }
-            return null;
-        }
-        catch
+        });
+    }
+
+    private void MediaPlayer_EndReached(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
         {
-            return null;
-        }
+            Console.WriteLine("[vlc] Playback ended");
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.CurrentItem = null;
+            }
+            try { _currentMedia?.Dispose(); } catch { }
+            _currentMedia = null;
+        });
+        Task.Run(() => _mediaPlayer?.Stop());
     }
 
     private void Vm_CloseCastWindowRequested(object? sender, EventArgs e)
@@ -179,93 +247,8 @@ public partial class CastWindow : Window
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (WindowState == WindowState.FullScreen)
-            {
-                WindowState = WindowState.Normal;
-                WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            }
-            else
-            {
-                WindowState = WindowState.FullScreen;
-            }
+            WindowState = (WindowState == WindowState.FullScreen) ? WindowState.Normal : WindowState.FullScreen;
         });
-    }
-
-    private void Vm_PlayRequested(object? sender, Models.MediaItem item)
-    {
-        if (_libVlc == null || _mediaPlayer == null) return;
-
-        Dispatcher.UIThread.Post(async () =>
-        {
-            try
-            {
-                Media media;
-                // Use different Media constructors for URLs vs local paths
-                if (item.Type == Models.MediaType.YouTube || item.Source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                {
-                    media = new Media(_libVlc, new Uri(item.Source));
-                }
-                else
-                {
-                    // Use FromPath by constructor overload (omit redundant enum parameter)
-                    media = new Media(_libVlc, item.Source);
-                }
-
-                // Clear previous error before attempting play
-                if (DataContext is MainWindowViewModel vm)
-                {
-                    vm.ErrorMessage = string.Empty;
-                }
-
-                _mediaPlayer.Play(media);
-            }
-            catch (Exception ex)
-            {
-                if (DataContext is MainWindowViewModel vm)
-                {
-                    vm.ErrorMessage = $"Playback error: {ex.Message}";
-                    // Attempt fallback for YouTube URLs
-                    if (!string.IsNullOrEmpty(item.Source) && item.Source.Contains("youtube.com", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var resolved = await TryResolveWithYtDlpAsync(item.Source);
-                        if (!string.IsNullOrEmpty(resolved))
-                        {
-                            try
-                            {
-                                var media = new Media(_libVlc, new Uri(resolved));
-                                _mediaPlayer.Play(media);
-                                vm.ErrorMessage = string.Empty;
-                            }
-                            catch (Exception ex2)
-                            {
-                                vm.ErrorMessage = $"Fallback playback error: {ex2.Message}";
-                            }
-                        }
-                        else
-                        {
-                            vm.ErrorMessage = "Fallback resolver failed (yt-dlp not available or no URL).";
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    private void MediaPlayer_EndReached(object? sender, EventArgs e)
-    {
-        // EndReached is called from a LibVLC thread. 
-        // We update the UI and stop the player safely.
-        
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (DataContext is MainWindowViewModel vm)
-            {
-                vm.CurrentItem = null;
-            }
-        });
-
-        // Calling Stop() directly in EndReached or synchronously on UI thread can deadlock.
-        System.Threading.Tasks.Task.Run(() => _mediaPlayer?.Stop());
     }
 
     private void CastWindow_Closed(object? sender, EventArgs e)
@@ -280,26 +263,19 @@ public partial class CastWindow : Window
         if (_mediaPlayer != null)
         {
             _mediaPlayer.EndReached -= MediaPlayer_EndReached;
-            _mediaPlayer.EncounteredError -= MediaPlayer_EncounteredError;
-            _mediaPlayer.Playing -= MediaPlayer_Playing;
-            _mediaPlayer.Stopped -= MediaPlayer_Stopped;
         }
 
-        // 1. Detach the VideoView from the MediaPlayer first
         if (_videoView != null)
         {
             _videoView.MediaPlayer = null;
         }
 
-        // 2. Dispose of the MediaPlayer and LibVLC
-        // We do this carefully to avoid race conditions with the native side
         var mp = _mediaPlayer;
         _mediaPlayer = null;
-        
         var vlc = _libVlc;
         _libVlc = null;
 
-        System.Threading.Tasks.Task.Run(() =>
+        Task.Run(() =>
         {
             try
             {
@@ -307,10 +283,15 @@ public partial class CastWindow : Window
                 mp?.Dispose();
                 vlc?.Dispose();
             }
-            catch
+            catch { }
+
+            // Clean up temp YouTube HTML file
+            try
             {
-                // Ignore disposal errors during shutdown
+                if (!string.IsNullOrEmpty(_currentYoutubeFile) && File.Exists(_currentYoutubeFile))
+                    File.Delete(_currentYoutubeFile);
             }
+            catch { }
         });
     }
 
@@ -319,4 +300,5 @@ public partial class CastWindow : Window
         AvaloniaXamlLoader.Load(this);
     }
 }
+
 

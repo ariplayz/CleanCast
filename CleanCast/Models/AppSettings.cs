@@ -8,6 +8,7 @@ public class AppSettings
 {
     public bool UseHardwareDecoding { get; set; } = true;
 
+
     private static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CleanCast", "settings.json");
 
     public static AppSettings Load()
@@ -42,4 +43,3 @@ public class AppSettings
         }
     }
 }
-

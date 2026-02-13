@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         xmlns:vm="using:CleanCast.ViewModels"
+        xmlns:conv="using:CleanCast.Converters"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="CleanCast.Views.CastWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -11,10 +12,14 @@
         Icon="/Assets/ClearCast-IconOnly-Square.ico"
         Background="Black">
     <Grid>
-        <vlc:VideoView Name="VideoPlayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+        <!-- Local file video player -->
+        <vlc:VideoView Name="VideoPlayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsVisible="True" />
 
-        <Panel Background="Black" IsVisible="{Binding CurrentItem, Converter={x:Static ObjectConverters.IsNull}}">
-            <!-- Minimal placeholder for when nothing is being cast -->
+        <!-- YouTube embedded player container (opens in default browser) -->
+        <Panel Name="YoutubeContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsVisible="False" Background="Black" />
+
+        <!-- Idle placeholder -->
+        <Panel Background="Black" IsVisible="{Binding CurrentItem, Converter={x:Static conv:ObjectConverters.IsNull}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
                 <Image Source="/Assets/ClearCast.png" Width="200" Opacity="0.5"/>
                 <TextBlock Text="Ready for casting..." 
@@ -26,3 +31,7 @@
         </Panel>
     </Grid>
 </Window>
+
+
+
+
